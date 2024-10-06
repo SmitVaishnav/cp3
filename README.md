@@ -1,4 +1,4 @@
-we have build an ai saas platform in which you can manipulate images just like how you manipulate peoples🙂 khair steps niche diye gaye hai apne laptop me setup krne k liye
+we have build an ai saas platform in which you can manipulate images, khair steps niche diye gaye hai apne laptop me setup krne k liye
 
 after forking this repositary you need to create on file '.env.local' and paste the below items
 
