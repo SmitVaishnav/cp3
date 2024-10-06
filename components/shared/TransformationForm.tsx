@@ -98,8 +98,8 @@ const TransformationForm = ({ action, data = null, userId, type, creditBalance, 
           const newImage = await addImage({
             image: {
               ...imageData,
-              path: image.secureURL || image.url || '', // Make sure this is set correctly
-            },
+              path: image?.secureURL || image?.url || image?.publicId || '', // Make sure this is set correctly
+            } as const as typeof imageData & { path: string },
             userId,
             path: '/'
           })
