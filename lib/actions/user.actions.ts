@@ -41,33 +41,49 @@ export async function getUserById(userId: string) {
     if (!user) {
       console.log("User not found in the database for clerkId:", userId);
       
-      // Fetch user details from Clerk
-      const clerkUser = await clerkClient.users.getUser(userId);
-      
-      if (!clerkUser) {
-        throw new Error("User not found in Clerk");
+      try {
+        // Fetch user details from Clerk
+        const clerkUser = await clerkClient.users.getUser(userId);
+        
+        if (!clerkUser) {
+          console.log("User not found in Clerk");
+          return null;
+        }
+
+        // Create a new user with Clerk data
+        const newUser = await createUser({
+          clerkId: userId,
+          email: clerkUser.emailAddresses[0]?.emailAddress || "",
+          username: clerkUser.username || `user${userId.slice(-5)}`,
+          firstName: clerkUser.firstName || "",
+          lastName: clerkUser.lastName || "",
+          photo: clerkUser.imageUrl || "https://example.com/placeholder.jpg"
+        });
+
+        if (!newUser) {
+          console.log("Failed to create new user");
+          return null;
+        }
+
+        console.log("Created new user:", newUser);
+        user = newUser;
+      } catch (clerkError) {
+        console.error("Error fetching user from Clerk:", clerkError);
+        return null;
       }
-
-      // Create a new user with Clerk data
-      const newUser = await createUser({
-        clerkId: userId,
-        email: clerkUser.emailAddresses[0]?.emailAddress || "",
-        username: clerkUser.username || `user${userId.slice(-5)}`,
-        firstName: clerkUser.firstName || "",
-        lastName: clerkUser.lastName || "",
-        photo: clerkUser.imageUrl || "https://example.com/placeholder.jpg"
-      });
-
-      console.log("Created new user:", newUser);
-      user = newUser;
     }
 
-    console.log("User found:", user);
+    if (!user) {
+      console.log("User not found and could not be created");
+      return null;
+    }
+
+    console.log("User found or created:", user);
 
     return JSON.parse(JSON.stringify(user));
   } catch (error) {
     console.error("Error in getUserById:", error);
-    handleError(error);
+    return null;
   }
 }
 
@@ -115,17 +131,41 @@ export async function updateCredits(userId: string, creditsToAdd: number) {
   try {
     await connectToDatabase();
 
+    console.log(`Attempting to update credits for user with clerkId: ${userId}`);
+
+    // First, try to find the user
+    let user = await User.findOne({ clerkId: userId });
+
+    // If user is not found, attempt to create one
+    if (!user) {
+      console.log(`User not found for clerkId: ${userId}. Attempting to create.`);
+      user = await getUserById(userId);
+      if (!user) {
+        console.error(`Failed to find or create user with clerkId: ${userId}`);
+        // Instead of throwing an error, we'll return null
+        return null;
+      }
+      console.log(`User created: ${JSON.stringify(user)}`);
+    }
+
+    // Now that we're sure the user exists, update the credits
     const updatedUser = await User.findOneAndUpdate(
       { clerkId: userId },
       { $inc: { creditBalance: creditsToAdd } },
       { new: true }
     );
 
-    if (!updatedUser) throw new Error("User not found");
+    if (!updatedUser) {
+      console.error(`Failed to update credits for user with clerkId: ${userId}`);
+      // Instead of throwing an error, we'll return null
+      return null;
+    }
 
-    return updatedUser;
+    console.log(`Credits updated successfully for user: ${JSON.stringify(updatedUser)}`);
+    return JSON.parse(JSON.stringify(updatedUser));
   } catch (error) {
     console.error("Error updating user credits:", error);
-    throw error;
+    // Instead of throwing the error, we'll return null
+    return null;
   }
 }
