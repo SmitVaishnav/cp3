@@ -12,13 +12,29 @@ export async function createUser(user: CreateUserParams) {
   try {
     await connectToDatabase();
 
-    // Check if user already exists
-    const existingUser = await User.findOne({ clerkId: user.clerkId });
+    // First try to find by clerkId
+    let existingUser = await User.findOne({ clerkId: user.clerkId });
+    
     if (existingUser) {
-      console.log("User already exists:", existingUser);
+      console.log("User found by clerkId:", existingUser);
       return JSON.parse(JSON.stringify(existingUser));
     }
 
+    // If not found by clerkId, try to find by email
+    existingUser = await User.findOne({ email: user.email });
+    
+    if (existingUser) {
+      // Update the existing user with the new clerkId
+      console.log("User found by email, updating clerkId");
+      const updatedUser = await User.findOneAndUpdate(
+        { email: user.email },
+        { clerkId: user.clerkId },
+        { new: true }
+      );
+      return JSON.parse(JSON.stringify(updatedUser));
+    }
+
+    // If no existing user found, create new user
     const newUser = await User.create(user);
     console.log("New user created:", newUser);
 
