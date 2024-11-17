@@ -4,9 +4,16 @@ import { dataUrl, debounce, download, getImageSize } from '@/lib/utils'
 import { CldImage, getCldImageUrl } from 'next-cloudinary'
 import { PlaceholderValue } from 'next/dist/shared/lib/get-img-props'
 import Image from 'next/image'
-import React from 'react'
+import React, { useState } from 'react'
+import TransformationStats from './TransformationStats';
+
 
 const TransformedImage = ({ image, type, title, transformationConfig, isTransforming, setIsTransforming, hasDownload = false }: TransformedImageProps) => {
+  const [transformedDimensions, setTransformedDimensions] = useState({
+    width: image?.width || 0,
+    height: image?.height || 0
+  });
+
   const downloadHandler = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.preventDefault();
 
@@ -17,6 +24,14 @@ const TransformedImage = ({ image, type, title, transformationConfig, isTransfor
       ...transformationConfig
     }), title)
   }
+
+  const handleTransformedImageLoad = (e: any) => {
+    setTransformedDimensions({
+      width: e.target.naturalWidth,
+      height: e.target.naturalHeight
+    });
+    setIsTransforming && setIsTransforming(false);
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -51,9 +66,7 @@ const TransformedImage = ({ image, type, title, transformationConfig, isTransfor
             sizes={"(max-width: 767px) 100vw, 50vw"}
             placeholder={dataUrl as PlaceholderValue}
             className="transformed-image"
-            onLoad={() => {
-              setIsTransforming && setIsTransforming(false);
-            }}
+            onLoad={handleTransformedImageLoad}
             onError={() => {
               debounce(() => {
                 setIsTransforming && setIsTransforming(false);
@@ -61,6 +74,20 @@ const TransformedImage = ({ image, type, title, transformationConfig, isTransfor
             }}
             {...transformationConfig}
           />
+
+          {type === 'restore' && !isTransforming && (
+            <TransformationStats 
+              originalImage={{
+                width: image.width,
+                height: image.height
+              }}
+              transformedImage={{
+                width: transformedDimensions.width,
+                height: transformedDimensions.height
+              }}
+              transformationType={type}
+            />
+          )}
 
           {isTransforming && (
             <div className="transforming-loader">
